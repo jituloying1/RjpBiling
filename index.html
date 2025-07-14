@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>RJP Logistic - Bill System</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f0f0f0; }
+    .container, .login-box {
+      max-width: 850px; margin: auto; background: white; padding: 20px; box-shadow: 0 0 10px rgba(0,0,0,0.2);
+    }
+    .hidden { display: none; }
+    h2, h4 { text-align: center; margin: 0; }
+    .company-info { text-align: center; margin-bottom: 20px; }
+    label { font-weight: bold; display: block; margin-top: 10px; }
+    input, select {
+      width: 100%; padding: 6px; margin-top: 5px;
+    }
+    .row { display: flex; gap: 20px; flex-wrap: wrap; }
+    .row > div { flex: 1; min-width: 250px; }
+    .sign-box {
+      display: flex; justify-content: space-between; margin-top: 40px;
+    }
+    .sign {
+      text-align: center; width: 40%; border-top: 1px solid #000; padding-top: 5px;
+    }
+    .print-btn, .save-btn {
+      margin-top: 20px; background: #007bff; color: white; padding: 10px 20px;
+      border: none; cursor: pointer;
+    }
+    .print-btn:hover, .save-btn:hover { background: #0056b3; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; }
+    .login-box input { margin-bottom: 10px; }
+    .bill-wrapper {
+      margin-top: 30px;
+      padding: 15px;
+      border: 2px solid #007bff;
+    }
+    .single-bill-print-btn {
+      margin-top: 10px;
+      background: #28a745;
+      color: white;
+      padding: 6px 12px;
+      border: none;
+      cursor: pointer;
+    }
+    @media print {
+      .print-btn, .save-btn, .login-box, #billModal, .single-bill-print-btn {
+        display: none !important;
+      }
+    }
+
+    /* Popup Modal */
+    #billModal {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background-color: rgba(0,0,0,0.7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+    #billModal .modal-content {
+      background: white;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 20px;
+      max-width: 900px;
+      width: 95%;
+      position: relative;
+    }
+    #billModal .close-btn {
+      position: absolute;
+      top: 10px; right: 10px;
+      background: red; color: white;
+      border: none;
+      padding: 5px 10px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Login Page -->
+<div class="login-box" id="loginBox">
+  <h2>Login - RJP Logistic</h2>
+  <label>User ID</label>
+  <input type="text" id="userId" placeholder="Enter User ID">
+  <label>Password</label>
+  <input type="password" id="password" placeholder="Enter Password">
+  <button class="save-btn" onclick="login()">Login</button>
+  <p id="loginMsg" style="color:red;"></p>
+</div>
+
+<!-- Bill Entry Page -->
+<div class="container hidden" id="billPage">
+  <div class="company-info">
+    <h2>RJP LOGESTIC PRIVATE LIMITED</h2>
+    <p>Contact: 7896220943 / 6001571316 / 9344958807</p>
+    <p>Email: your@email.com</p>
+    <h4>Invoice/Bill</h4>
+  </div>
+
+  <div class="row">
+    <div><label>Company/Client Name</label><input type="text" id="company"></div>
+    <div><label>Type</label>
+      <select id="type">
+        <option>Purchase</option>
+        <option>Sale</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="row">
+    <div><label>Product Name</label><input type="text" id="product"></div>
+    <div><label>Amount (₹)</label><input type="number" id="amount"></div>
+  </div>
+
+  <div class="row">
+    <div><label>Payment Method</label>
+      <select id="payment">
+        <option>Card</option>
+        <option>UPI</option>
+        <option>Account Transfer</option>
+        <option>EMI</option>
+        <option>Cash</option>
+      </select>
+    </div>
+    <div><label>Date</label><input type="date" id="date"></div>
+  </div>
+
+  <div class="row">
+    <div><label>Place</label><input type="text" id="place"></div>
+  </div>
+
+  <div class="sign-box">
+    <div class="sign">Seller Signature</div>
+    <div class="sign">Buyer Signature</div>
+  </div>
+
+  <button class="save-btn" onclick="saveBill()">💾 Save Bill</button>
+  <button class="print-btn" onclick="window.print()">🖨️ Print Current Bill</button>
+  <button class="print-btn" onclick="showBillModal()">🧾 Print All Saved Bills</button>
+</div>
+
+<!-- Bill List Modal -->
+<div id="billModal">
+  <div class="modal-content">
+    <button class="close-btn" onclick="closeBillModal()">✖ Close</button>
+    <h3 style="text-align:center;">🧾 Saved Bills</h3>
+    <div id="modalBillList"></div>
+  </div>
+</div>
+
+<script>
+  function login() {
+    const user = document.getElementById('userId').value;
+    const pass = document.getElementById('password').value;
+    if (user === 'Rjplogesticprivatelimited' && pass === 'Rjp@123') {
+      document.getElementById('loginBox').classList.add('hidden');
+      document.getElementById('billPage').classList.remove('hidden');
+      loadBills(); // optional: preload if needed
+    } else {
+      document.getElementById('loginMsg').innerText = 'Invalid credentials';
+    }
+  }
+
+  document.getElementById("date").valueAsDate = new Date();
+
+  function saveBill() {
+    const bill = {
+      company: document.getElementById('company').value,
+      type: document.getElementById('type').value,
+      product: document.getElementById('product').value,
+      amount: document.getElementById('amount').value,
+      payment: document.getElementById('payment').value,
+      date: document.getElementById('date').value,
+      place: document.getElementById('place').value
+    };
+    const bills = JSON.parse(localStorage.getItem('rjp_bills') || '[]');
+    bills.push(bill);
+    localStorage.setItem('rjp_bills', JSON.stringify(bills));
+    alert("✅ Bill Saved Permanently");
+  }
+
+  function showBillModal() {
+    const bills = JSON.parse(localStorage.getItem('rjp_bills') || '[]');
+    const container = document.getElementById('modalBillList');
+    container.innerHTML = '';
+    bills.forEach((bill, index) => {
+      container.innerHTML += `
+        <div class="bill-wrapper" id="modalBill${index}">
+          <table>
+            <tr><th colspan="2">Bill #${index + 1}</th></tr>
+            <tr><td>Serial No.</td><td>${index + 1}</td></tr>
+            <tr><td>Company/Client</td><td>${bill.company}</td></tr>
+            <tr><td>Type</td><td>${bill.type}</td></tr>
+            <tr><td>Product</td><td>${bill.product}</td></tr>
+            <tr><td>Amount</td><td>₹${bill.amount}</td></tr>
+            <tr><td>Payment</td><td>${bill.payment}</td></tr>
+            <tr><td>Date</td><td>${bill.date}</td></tr>
+            <tr><td>Place</td><td>${bill.place}</td></tr>
+            <tr><td colspan="2" style="padding-top: 20px;">
+              <div style="display: flex; justify-content: space-between;">
+                <div style="text-align:center;width:45%;border-top:1px solid black;">Seller Signature</div>
+                <div style="text-align:center;width:45%;border-top:1px solid black;">Buyer Signature</div>
+              </div>
+            </td></tr>
+          </table>
+          <button class="single-bill-print-btn" onclick="printSingleBill(${index})">🖨️ Print This Bill</button>
+        </div><br>`;
+    });
+    document.getElementById('billModal').style.display = 'flex';
+  }
+
+  function closeBillModal() {
+    document.getElementById('billModal').style.display = 'none';
+  }
+
+  function printSingleBill(index) {
+    const billContent = document.getElementById('modalBill' + index).innerHTML;
+    const printWindow = window.open('', '', 'width=800,height=600');
+    printWindow.document.write(`<html><head><title>Print Bill</title>
+      <style>
+        body { font-family: Arial; padding: 20px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #ccc; padding: 8px; }
+        .sign-box { display: flex; justify-content: space-between; margin-top: 30px; }
+        .sign { width: 40%; border-top: 1px solid #000; text-align: center; padding-top: 5px; }
+      </style>
+    </head><body>${billContent}</body></html>`);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+    printWindow.close();
+  }
+</script>
+
+</body>
+</html>
