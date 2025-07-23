@@ -11,12 +11,13 @@
     .hidden { display: none; }
     h2, h4 { text-align: center; margin: 0; }
     .company-info { text-align: center; margin-bottom: 20px; }
+    .company-info img { max-width: 120px; margin-bottom: 10px; }
     label { font-weight: bold; display: block; margin-top: 10px; }
     input, select {
       width: 100%; padding: 6px; margin-top: 5px;
     }
     .row { display: flex; gap: 20px; flex-wrap: wrap; }
-    .row > div { flex: 1; min-width: 250px; }
+    .row > div { flex: 1; min-width: 245px; }
     .sign-box {
       display: flex; justify-content: space-between; margin-top: 40px;
     }
@@ -50,7 +51,6 @@
       }
     }
 
-    /* Popup Modal */
     #billModal {
       position: fixed;
       top: 0; left: 0;
@@ -78,6 +78,11 @@
       padding: 5px 10px;
       cursor: pointer;
     }
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
   </style>
 </head>
 <body>
@@ -96,10 +101,14 @@
 <!-- Bill Entry Page -->
 <div class="container hidden" id="billPage">
   <div class="company-info">
+    <img src="ChatGPT Image Jul 14, 2025, 07_58_22 PM.png" alt="Company Logo">
     <h2>RJP LOGESTIC PRIVATE LIMITED</h2>
     <p>Contact: 7896220943 / 6001571316 / 9344958807</p>
     <p>Email: your@email.com</p>
-    <h4>Invoice/Bill</h4>
+
+    <!-- Top Bar with Title and Stock Button -->
+    <div class="top-bar">
+      <h4>Invoice/Bill</h4>
   </div>
 
   <div class="row">
@@ -142,12 +151,295 @@
   <button class="save-btn" onclick="saveBill()">💾 Save Bill</button>
   <button class="print-btn" onclick="window.print()">🖨️ Print Current Bill</button>
   <button class="print-btn" onclick="showBillModal()">🧾 Print All Saved Bills</button>
+  <!DOCTYPE html>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 30px;
+      background: #f5f5f5;
+    }
+    h1 { text-align: center; }
+    .btn {
+      padding: 10px 20px;
+      margin: 10px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .btn:hover { background: #0056b3; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      background: white;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 10px;
+      text-align: center;
+    }
+    th {
+      background: #007bff;
+      color: white;
+    }
+    #formPopup, #mainStockPopup {
+      display: none;
+      position: fixed;
+      top: 20%;
+      left: 50%;
+      transform: translate(-50%, -20%);
+      background: white;
+      padding: 20px;
+      border: 2px solid #007bff;
+      border-radius: 10px;
+      z-index: 999;
+      box-shadow: 0 0 10px #999;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+    #overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 998;
+    }
+    input, select {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+    }
+    .stock-btn {
+      display: inline-block;
+      margin: 5px;
+      background: #28a745;
+    }
+    .stock-btn:hover { background: #1e7e34; }
+    #stockOutput {
+      margin-top: 15px;
+      font-weight: bold;
+      color: #333;
+    }
+  </style>
+
+<h1>Store Management</h1>
+<button class="btn" onclick="toggleTable()">Store List</button>
+<button class="btn" onclick="openForm()">Input Data</button>
+<button class="btn" onclick="openMainStock()">Main Stock</button>
+
+<div id="overlay"></div>
+
+<!-- Input Form -->
+<div id="formPopup">
+  <h3 id="formTitle">Enter Store Item</h3>
+  <form id="itemForm">
+    <label>Item Name:</label>
+    <input type="text" id="itemName" required>
+    <label>Available:</label>
+    <input type="number" id="available" required>
+    <label>Unit:</label>
+    <select id="unit" required>a
+      <option value="kg">Kg</option>
+      <option value="liter">Liter</option>
+      <option value="qt">Qt</option>
+      <option value="bag">Bag</option>
+      <option value="bottle">Bottle</option>
+      <option value="drum">Drum</option>
+    </select>
+    <button type="submit" class="btn">Save</button>
+    <button type="button" class="btn" onclick="closeForm()" style="background:red;">Cancel</button>
+  </form>
+</div>
+
+<!-- Main Stock Popup -->
+<div id="mainStockPopup">
+  <h3>Main Stock</h3>
+  <div id="itemButtons"></div>
+  <div id="stockOutput"></div>
+  <button class="btn" onclick="closeMainStock()" style="background:red;">Close</button>
+</div>
+
+<!-- Store Table -->
+<div id="tableContainer" style="display:none;">
+  <h2>Store Item List</h2>
+  <table id="storeTable">
+    <thead>
+      <tr>
+        <th>Serial Number</th>
+        <th>Date</th>
+        <th>Item Name</th>
+        <th>Available</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<script>
+  let serialNumber = 1;
+  let editingRow = null;
+  let oldAmount = 0;
+  let oldItem = '';
+  let stockMap = {};
+  let itemList = [];
+
+  const itemNames = ["OIL", "RICE", "PIG", "PAN", "TAMUL", "A","B","C","D","E","F","G","H","I","J",
+    "K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z"];
+
+  // Load from localStorage
+  window.onload = function () {
+    const storedData = localStorage.getItem('storeData');
+    if (storedData) {
+      itemList = JSON.parse(storedData);
+      itemList.forEach(item => {
+        addRowToTable(item, false);
+        updateStockMap(item.itemName, item.available, item.unit);
+      });
+      serialNumber = itemList.length + 1;
+    }
+  };
+
+  function toggleTable() {
+    const tableDiv = document.getElementById('tableContainer');
+    tableDiv.style.display = tableDiv.style.display === 'none' ? 'block' : 'none';
+  }
+
+  function openForm(isEdit = false) {
+    document.getElementById('overlay').style.display = 'block';
+    document.getElementById('formPopup').style.display = 'block';
+    document.getElementById('formTitle').textContent = isEdit ? "Edit Store Item" : "Enter Store Item";
+  }
+
+  function closeForm() {
+    document.getElementById('overlay').style.display = 'none';
+    document.getElementById('formPopup').style.display = 'none';
+    document.getElementById('itemForm').reset();
+    editingRow = null;
+  }
+
+  function openMainStock() {
+    document.getElementById('overlay').style.display = 'block';
+    document.getElementById('mainStockPopup').style.display = 'block';
+    const container = document.getElementById('itemButtons');
+    container.innerHTML = '';
+    itemNames.forEach(name => {
+      const btn = document.createElement('button');
+      btn.className = 'btn stock-btn';
+      btn.textContent = name;
+      btn.onclick = () => showStock(name);
+      container.appendChild(btn);
+    });
+  }
+
+
+  function closeMainStock() {
+    document.getElementById('overlay').style.display = 'none';
+    document.getElementById('mainStockPopup').style.display = 'none';
+    document.getElementById('stockOutput').textContent = '';
+  }
+
+  function showStock(itemName) {
+    const data = stockMap[itemName.toUpperCase()];
+    const output = document.getElementById('stockOutput');
+    if (data) {
+      output.textContent = `Available ${itemName}: ${data.total} ${data.unit}`;
+    } else {
+      output.textContent = `No data for ${itemName}`;a
+    }
+  }
+
+  function updateStockMap(itemName, available, unit) {
+    stockMap[itemName] = stockMap[itemName] || { total: 0, unit };
+    stockMap[itemName].total += available;
+  }
+
+  function saveToLocalStorage() {
+    localStorage.setItem('storeData', JSON.stringify(itemList));
+  }
+
+  document.getElementById('itemForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    const itemName = document.getElementById('itemName').value.toUpperCase();
+    const available = parseFloat(document.getElementById('available').value);
+    const unit = document.getElementById('unit').value;
+    const date = new Date().toLocaleString();
+
+    if (editingRow) {
+      // Edit mode
+      const index = editingRow.dataset.index;
+      const prevItem = itemList[index];
+
+      // Adjust stock
+      if (prevItem.itemName !== itemName) {
+        stockMap[prevItem.itemName].total -= prevItem.available;
+        if (stockMap[prevItem.itemName].total <= 0) delete stockMap[prevItem.itemName];
+      } else {
+        stockMap[itemName].total -= prevItem.available;
+      }
+
+      itemList[index] = { serial: prevItem.serial, date, itemName, available, unit };
+      updateStockMap(itemName, available, unit);
+      renderTable();
+      saveToLocalStorage();
+      editingRow = null;
+    } else {
+      const newItem = { serial: serialNumber++, date, itemName, available, unit };
+      itemList.push(newItem);
+      addRowToTable(newItem);
+      updateStockMap(itemName, available, unit);
+      saveToLocalStorage();
+    }
+
+    closeForm();
+  });
+
+  function addRowToTable(item, save = true) {
+    const table = document.getElementById('storeTable').getElementsByTagName('tbody')[0];
+    const newRow = table.insertRow();
+    const index = itemList.indexOf(item);
+
+    newRow.dataset.index = index;
+    newRow.innerHTML = `
+      <td>${item.serial}</td>
+      <td>${item.date}</td>
+      <td>${item.itemName}</td>
+      <td>${item.available} ${item.unit}</td>
+      <td><button class="btn" onclick="editRow(this)">Edit</button></td>
+    `;
+  }
+
+  function renderTable() {
+    const table = document.getElementById('storeTable').getElementsByTagName('tbody')[0];
+    table.innerHTML = '';
+    itemList.forEach(item => addRowToTable(item, false));
+  }
+
+  function editRow(button) {
+    const row = button.parentElement.parentElement;
+    editingRow = row;
+    const index = row.dataset.index;
+    const item = itemList[index];
+
+    document.getElementById('itemName').value = item.itemName;
+    document.getElementById('available').value = item.available;
+    document.getElementById('unit').value = item.unit;
+    openForm(true);
+  }
+</script>
+
 </div>
 
 <!-- Bill List Modal -->
 <div id="billModal">
   <div class="modal-content">
     <button class="close-btn" onclick="closeBillModal()">✖ Close</button>
+    <img src="logo.png" alt="Company Logo" style="max-width: 100px; display:block; margin: 0 auto 10px;">
     <h3 style="text-align:center;">🧾 Saved Bills</h3>
     <div id="modalBillList"></div>
   </div>
@@ -160,7 +452,7 @@
     if (user === 'Rjplogesticprivatelimited' && pass === 'Rjp@123') {
       document.getElementById('loginBox').classList.add('hidden');
       document.getElementById('billPage').classList.remove('hidden');
-      loadBills(); // optional: preload if needed
+      loadBills();
     } else {
       document.getElementById('loginMsg').innerText = 'Invalid credentials';
     }
@@ -234,6 +526,10 @@
     printWindow.focus();
     printWindow.print();
     printWindow.close();
+  }
+
+  function loadBills() {
+    // placeholder for future load functions
   }
 </script>
 
